@@ -40,29 +40,6 @@ jobs:
       run: |
         & "${{github.workspace}}/vcpkg/vcpkg.exe" list
 
-    - name: Debug - List vcpkg root
-      shell: pwsh
-      run: |
-        ls -la "${{github.workspace}}/vcpkg"
-
-    - name: Debug - List vcpkg installed (detailed)
-      shell: pwsh
-      run: |
-        ls -la "${{github.workspace}}/vcpkg/installed/x64-windows-static"
-        ls -la "${{github.workspace}}/vcpkg/installed/x64-windows-static/lib"  # Check for .lib files
-        ls -la "${{github.workspace}}/vcpkg/installed/x64-windows-static/include" # Check for headers
-        ls -la "${{github.workspace}}/vcpkg/installed/x64-windows-static/share" # Check for CMake files
-        ls -la "${{github.workspace}}/vcpkg/installed/x64-windows-static/share/boost" # Specifically Boost
-
-    - name: Debug - Check for BoostConfig.cmake
-      shell: pwsh
-      run: |
-        if (Test-Path "${{github.workspace}}/vcpkg/installed/x64-windows-static/share/boost/BoostConfig.cmake") {
-          echo "BoostConfig.cmake exists!"
-        } else {
-          echo "BoostConfig.cmake does NOT exist!"
-        }
-
     - name: Configure CMake (with vcpkg)
       shell: pwsh  # Use PowerShell!
       run: |
@@ -72,6 +49,29 @@ jobs:
           -DCMAKE_INSTALL_PREFIX:STRING=${{github.workspace}}/build/extern `
           -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake `
           -DVCPKG_TARGET_TRIPLET=x64-windows-static  # Explicitly set the triplet!
+
+    - name: Debug - List vcpkg root
+      shell: pwsh
+      run: |
+        Get-ChildItem -Force "${{github.workspace}}/vcpkg"
+
+    - name: Debug - List vcpkg installed (detailed)
+      shell: pwsh
+      run: |
+        Get-ChildItem -Force "${{github.workspace}}/vcpkg/installed/x64-windows-static"
+        Get-ChildItem -Force "${{github.workspace}}/vcpkg/installed/x64-windows-static/lib"
+        Get-ChildItem -Force "${{github.workspace}}/vcpkg/installed/x64-windows-static/include"
+        Get-ChildItem -Force "${{github.workspace}}/vcpkg/installed/x64-windows-static/share"
+        Get-ChildItem -Force "${{github.workspace}}/vcpkg/installed/x64-windows-static/share/boost"
+
+    - name: Debug - Check for BoostConfig.cmake
+      shell: pwsh
+      run: |
+        if (Test-Path "${{github.workspace}}/vcpkg/installed/x64-windows-static/share/boost/BoostConfig.cmake") {
+          echo "BoostConfig.cmake exists!"
+        } else {
+          echo "BoostConfig.cmake does NOT exist!"
+        }
 
     - name: Build
       shell: bash
