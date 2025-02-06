@@ -51,7 +51,7 @@ jobs:
     - name: Debug - List vcpkg Packages
       shell: bash
       run: |
-        ${{github.workspace}}/vcpkg/vcpkg list
+        ${{github.workspace}}/vcpkg/vcpkg.exe list  # Corrected path! Use vcpkg.exe
 
     - name: Configure CMake (with vcpkg)
       shell: bash
