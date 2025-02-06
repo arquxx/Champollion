@@ -42,17 +42,17 @@ jobs:
         echo "VCPKG_DEFAULT_TRIPLET=x64-windows-static" >> $GITHUB_ENV
 
     - name: List vcpkg Packages (for debugging)
-      shell: pwsh  # Use PowerShell!
+      shell: pwsh
       run: |
         & "${{github.workspace}}/vcpkg/vcpkg.exe" list
 
     - name: Configure CMake (with vcpkg)
-      shell: bash
+      shell: pwsh  # Use PowerShell!
       run: |
-        cmake -B ${{github.workspace}}/build \
-          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
-          -DCHAMPOLLION_USE_STATIC_RUNTIME:BOOL=TRUE \
-          -DCMAKE_INSTALL_PREFIX:STRING=${{github.workspace}}/build/extern \
+        cmake -B ${{github.workspace}}/build `
+          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} `
+          -DCHAMPOLLION_USE_STATIC_RUNTIME:BOOL=TRUE `
+          -DCMAKE_INSTALL_PREFIX:STRING=${{github.workspace}}/build/extern `
           -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake
 
     - name: Build
@@ -82,7 +82,7 @@ jobs:
          run: |
            ls -la artifacts/*
            cd artifacts/${{ env.PROJECT_NAME }}
-           zip -r9 "../{ env.PROJECT_NAME }-${{ github.ref_name }}.zip" *
+           zip -r9 "../${{ env.PROJECT_NAME }}-${{ github.ref_name }}.zip" *
        - name: Release
          uses: softprops/action-gh-release@v1
          with:
