@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 cmake_policy(SET CMP0048 NEW) # VERSION variables
 cmake_policy(SET CMP0091 NEW) # CMAKE_MSVC_RUNTIME_LIBRARY
-cmake_policy(SET CMP0167 NEW) # For Boost
+cmake_policy(SET CMP0167 NEW) # For Boost (still a good idea)
 
 # Get the version number from Decompiler/Version.hpp
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/Decompiler/Version.hpp" CHAMPOLLION_VERSION_FILE)
@@ -21,16 +21,10 @@ set(PACKAGE_NAME      "Champollion")
 set(PACKAGE_VERSION   "${CHAMPOLLION_VERSION}")
 set(PACKAGE_STRING    "${PACKAGE_NAME} ${PACKAGE_VERSION}")
 set(PACKAGE_TARNAME   "${PACKAGE_NAME}-${PACKAGE_VERSION}")
-set(PACKAGE_BUGREPORT "https://github.com/Orvid/champollion/issues")
-
-if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-  set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-      CACHE STRING "")
-endif()
+set(PACKAGE_BUGREPORT "https://github.com/Orvid/Champollion/issues")
 
 project(${PACKAGE_NAME} VERSION ${PACKAGE_VERSION} LANGUAGES CXX)
 include(GNUInstallDirs)
-
 
 option(CHAMPOLLION_STATIC_LIBRARY "Build Champollion as a static library" OFF)
 option(CHAMPOLLION_USE_STATIC_RUNTIME "Compile Champollion with static runtime" OFF)
@@ -41,8 +35,7 @@ else()
   set(CMAKE_CXX_STANDARD 17)
 endif()
 
-
-# Improved auto_source_group function
+# Improved auto_source_group function (same as before)
 function(auto_source_group rootName rootDir)
   file(TO_CMAKE_PATH "${rootDir}" rootDir)
   foreach (fil ${ARGN})
@@ -57,7 +50,6 @@ function(auto_source_group rootName rootDir)
     source_group("${fileGroup}" FILES "${fil}") # Directly add the file
   endforeach()
 endfunction()
-
 
 if (CHAMPOLLION_USE_STATIC_RUNTIME)
   if (MSVC)
@@ -79,9 +71,7 @@ set(CHAMPOLLION_CMAKE_VERSION_CONFIG_FILE "${CHAMPOLLION_CMAKE_CONFIG_DIR}/${PRO
 set(CHAMPOLLION_CMAKE_PROJECT_CONFIG_FILE "${CHAMPOLLION_CMAKE_CONFIG_DIR}/${PROJECT_NAME}Config.cmake")
 set(CHAMPOLLION_CMAKE_PROJECT_TARGETS_FILE "${CHAMPOLLION_CMAKE_CONFIG_DIR}/${PROJECT_NAME}-targets.cmake")
 
-
 if(CHAMPOLLION_STATIC_LIBRARY)
-
   file(GLOB DECOMPILER_HEADER_FILES "Decompiler/*.hpp")
   file(GLOB PEX_HEADER_FILES "Pex/*.hpp")
   file(GLOB NODE_HEADER_FILES "Decompiler/Node/*.hpp")
@@ -132,19 +122,19 @@ if(CHAMPOLLION_STATIC_LIBRARY)
   install(FILES ${CHAMPOLLION_CMAKE_VERSION_CONFIG_FILE} ${CHAMPOLLION_CMAKE_PROJECT_CONFIG_FILE}
   DESTINATION ${CHAMPOLLION_CONFIG_INSTALL_DIR})
 else()
+  # --- Find Dependencies (Simplified with Manifest Mode) ---
+  # In manifest mode, you *usually* don't need explicit find_package calls
+  # for dependencies declared in vcpkg.json.  vcpkg handles this automatically.
+  # However, we *do* need to find_package for Boost to get the correct target names.
 
-  # --- Find Dependencies (Do this ONLY ONCE, in the ROOT CMakeLists.txt) ---
-  find_package(Boost REQUIRED COMPONENTS program_options)
-  find_package(fmt CONFIG REQUIRED)
-
-  # No need for include_directories with imported targets.
+  find_package(Boost REQUIRED COMPONENTS program_options) # Keep this!
+  find_package(fmt CONFIG REQUIRED) # Keep this!
 
   add_subdirectory(Decompiler)
   add_subdirectory(Pex)
-  add_subdirectory(Champollion) # Keep this *after* Decompiler and Pex
+  add_subdirectory(Champollion)
 
-  # Link to Decompiler and Pex (and now, correctly, to Boost)
-  # The Champollion executable now links to the libraries it directly depends on.
+  # Link to Decompiler, Pex, Boost, and fmt
   target_link_libraries(Champollion PRIVATE Decompiler Pex Boost::program_options fmt::fmt)
 
   install(
