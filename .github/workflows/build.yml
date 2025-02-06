@@ -21,19 +21,19 @@ jobs:
 
     - name: Setup vcpkg (with caching)
       uses: actions/cache@v3
-      id: cache-vcpkg  # Add an ID to the cache step
+      id: cache-vcpkg
       with:
-        path: ${{github.workspace}}/vcpkg
+        path: vcpkg  # Cache relative path
         key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg.json', '**/vcpkg-configuration.json') }}
         restore-keys: |
           ${{ runner.os }}-vcpkg-
 
     - name: Bootstrap vcpkg (if not cached)
       if: steps.cache-vcpkg.outputs.cache-hit != 'true'
-      shell: bash  # Use bash consistently
+      shell: bash
       run: |
-        git clone https://github.com/microsoft/vcpkg.git ${{github.workspace}}/vcpkg
-        ${{github.workspace}}/vcpkg/vcpkg/bootstrap-vcpkg.bat  # Corrected path!
+        git clone https://github.com/microsoft/vcpkg.git vcpkg # Clone to relative path
+        ./vcpkg/vcpkg/bootstrap-vcpkg.bat # Use relative path
 
     - name: Set VCPKG_ROOT
       shell: bash
@@ -51,7 +51,7 @@ jobs:
     - name: Debug - List vcpkg Packages
       shell: bash
       run: |
-        ${{github.workspace}}/vcpkg/vcpkg/vcpkg.exe list  # Corrected path!
+        ${{github.workspace}}/vcpkg/vcpkg.exe list  # Use absolute path
 
     - name: Configure CMake (with vcpkg)
       shell: bash
