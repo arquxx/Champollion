@@ -23,7 +23,7 @@ jobs:
       uses: actions/cache@v3
       id: cache-vcpkg
       with:
-        path: vcpkg
+        path: vcpkg  # Cache the 'vcpkg' directory *after* it's created
         key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg.json', '**/vcpkg-configuration.json') }}
         restore-keys: |
           ${{ runner.os }}-vcpkg-
@@ -41,37 +41,14 @@ jobs:
         & "${{github.workspace}}/vcpkg/vcpkg.exe" list
 
     - name: Configure CMake (with vcpkg)
-      shell: pwsh  # Use PowerShell!
+      shell: pwsh
       run: |
         cmake -B ${{github.workspace}}/build `
           -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} `
           -DCHAMPOLLION_USE_STATIC_RUNTIME:BOOL=TRUE `
           -DCMAKE_INSTALL_PREFIX:STRING=${{github.workspace}}/build/extern `
           -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake `
-          -DVCPKG_TARGET_TRIPLET=x64-windows-static  # Explicitly set the triplet!
-
-    - name: Debug - List vcpkg root
-      shell: pwsh
-      run: |
-        Get-ChildItem -Force "${{github.workspace}}/vcpkg"
-
-    - name: Debug - List vcpkg installed (detailed)
-      shell: pwsh
-      run: |
-        Get-ChildItem -Force "${{github.workspace}}/vcpkg/installed/x64-windows-static"
-        Get-ChildItem -Force "${{github.workspace}}/vcpkg/installed/x64-windows-static/lib"
-        Get-ChildItem -Force "${{github.workspace}}/vcpkg/installed/x64-windows-static/include"
-        Get-ChildItem -Force "${{github.workspace}}/vcpkg/installed/x64-windows-static/share"
-        Get-ChildItem -Force "${{github.workspace}}/vcpkg/installed/x64-windows-static/share/boost"
-
-    - name: Debug - Check for BoostConfig.cmake
-      shell: pwsh
-      run: |
-        if (Test-Path "${{github.workspace}}/vcpkg/installed/x64-windows-static/share/boost/BoostConfig.cmake") {
-          echo "BoostConfig.cmake exists!"
-        } else {
-          echo "BoostConfig.cmake does NOT exist!"
-        }
+          -DVCPKG_TARGET_TRIPLET=x64-windows-static
 
     - name: Build
       shell: bash
@@ -81,30 +58,30 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{env.PROJECT_NAME}}
-        path: build/Champollion/Release/Champollion.exe
+        path: build/Champollion/Release/Champollion.exe  # Correct relative path
         retention-days: 90
 
   release:
-     if: startsWith(github.ref, 'refs/tags/')
-     runs-on: ubuntu-latest
-     permissions:
-       contents: write
-     needs: build
-     steps:
-       - name: Download artifact
-         uses: actions/download-artifact@v4
-         with:
-           name: ${{ env.PROJECT_NAME }}
-           path: artifacts/${{ env.PROJECT_NAME }}
-       - name: Zip artifacts
-         run: |
-           ls -la artifacts/*
-           cd artifacts/${{ env.PROJECT_NAME }}
-           zip -r9 "../${{ env.PROJECT_NAME }}-${{ github.ref_name }}.zip" *
-       - name: Release
-         uses: softprops/action-gh-release@v1
-         with:
-           files: |
-             artifacts/${{ env.PROJECT_NAME }}-${{ github.ref_name }}.zip
-           draft: false
-           prerelease: false
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    needs: build
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.PROJECT_NAME }}
+          path: artifacts/${{ env.PROJECT_NAME }}
+      - name: Zip artifacts
+        run: |
+          ls -la artifacts/*
+          cd artifacts/${{ env.PROJECT_NAME }}
+          zip -r9 "../${{ env.PROJECT_NAME }}-${{ github.ref_name }}.zip" *
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/${{ env.PROJECT_NAME }}-${{ github.ref_name }}.zip
+          draft: false
+          prerelease: false
