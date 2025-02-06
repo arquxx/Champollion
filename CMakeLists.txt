@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 cmake_policy(SET CMP0048 NEW) # VERSION variables
 cmake_policy(SET CMP0091 NEW) # CMAKE_MSVC_RUNTIME_LIBRARY
+cmake_policy(SET CMP0167 NEW) # For Boost
 
 # Get the version number from Decompiler/Version.hpp
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/Decompiler/Version.hpp" CHAMPOLLION_VERSION_FILE)
@@ -41,36 +42,19 @@ else()
 endif()
 
 
-# Automatically create source_group directives for the sources passed in.
+# Improved auto_source_group function
 function(auto_source_group rootName rootDir)
   file(TO_CMAKE_PATH "${rootDir}" rootDir)
-  string(LENGTH "${rootDir}" rootDirLength)
-  set(sourceGroups)
   foreach (fil ${ARGN})
-    file(TO_CMAKE_PATH "${fil}" filePath)
-    string(FIND "${filePath}" "/" rIdx REVERSE)
-    if (rIdx EQUAL -1)
-      message(FATAL_ERROR "Unable to locate the final forward slash in '${filePath}'!")
+    get_filename_component(filePath ${fil} DIRECTORY) # Get the directory
+    if(filePath STREQUAL rootDir)
+        set(fileGroup "\\${rootName}") # Files directly in rootDir
+    else()
+		string(CONCAT rel_path "${rootDir}/" "") # Ensure rootDir ends in '/'
+        file(RELATIVE_PATH fileGroup "${rel_path}" "${filePath}")
+        string(REPLACE "/" "\\" fileGroup "\\${rootName}\\${fileGroup}")
     endif()
-    string(SUBSTRING "${filePath}" 0 ${rIdx} filePath)
-    
-    string(LENGTH "${filePath}" filePathLength)
-    string(FIND "${filePath}" "${rootDir}" rIdx)
-    if (NOT rIdx EQUAL 0)
-      continue()
-      #message(FATAL_ERROR "Source '${fil}' is outside of the root directory, '${rootDir}', that was passed to auto_source_group!")
-    endif()
-    math(EXPR filePathLength "${filePathLength} - ${rootDirLength}")
-    string(SUBSTRING "${filePath}" ${rootDirLength} ${filePathLength} fileGroup)
-    
-    string(REPLACE "/" "\\" fileGroup "${fileGroup}")
-    set(fileGroup "\\${rootName}${fileGroup}")
-    
-    list(FIND sourceGroups "${fileGroup}" rIdx)
-    if (rIdx EQUAL -1)
-      list(APPEND sourceGroups "${fileGroup}")
-      source_group("${fileGroup}" REGULAR_EXPRESSION "${filePath}/[^/.]+(.(idl|tab|yy))?.(c|cc|cpp|h|hpp|json|ll|php|tcc|y)$")
-    endif()
+    source_group("${fileGroup}" FILES "${fil}") # Directly add the file
   endforeach()
 endfunction()
 
@@ -95,6 +79,7 @@ set(CHAMPOLLION_CMAKE_VERSION_CONFIG_FILE "${CHAMPOLLION_CMAKE_CONFIG_DIR}/${PRO
 set(CHAMPOLLION_CMAKE_PROJECT_CONFIG_FILE "${CHAMPOLLION_CMAKE_CONFIG_DIR}/${PROJECT_NAME}Config.cmake")
 set(CHAMPOLLION_CMAKE_PROJECT_TARGETS_FILE "${CHAMPOLLION_CMAKE_CONFIG_DIR}/${PROJECT_NAME}-targets.cmake")
 
+
 if(CHAMPOLLION_STATIC_LIBRARY)
 
   file(GLOB DECOMPILER_HEADER_FILES "Decompiler/*.hpp")
@@ -118,7 +103,7 @@ if(CHAMPOLLION_STATIC_LIBRARY)
   )
   configure_package_config_file(
     ${CHAMPOLLION_CMAKE_CONFIG_TEMPLATE}
-    "${CHAMPOLLION_CMAKE_PROJECT_CONFIG_FILE}" 
+    "${CHAMPOLLION_CMAKE_PROJECT_CONFIG_FILE}"
     INSTALL_DESTINATION ${CHAMPOLLION_CONFIG_INSTALL_DIR}
   )
 
@@ -147,23 +132,21 @@ if(CHAMPOLLION_STATIC_LIBRARY)
   install(FILES ${CHAMPOLLION_CMAKE_VERSION_CONFIG_FILE} ${CHAMPOLLION_CMAKE_PROJECT_CONFIG_FILE}
   DESTINATION ${CHAMPOLLION_CONFIG_INSTALL_DIR})
 else()
-  if (VCPKG_TARGET_TRIPLET MATCHES "static")
-    if(NOT MSVC)
-      set(Boost_USE_STATIC_LIBS ON)
-      set(Boost_USE_STATIC_RUNTIME ON)
-    endif()
-  endif()
+
+  # --- Find Dependencies (Do this ONLY ONCE, in the ROOT CMakeLists.txt) ---
   find_package(Boost REQUIRED COMPONENTS program_options)
   find_package(fmt CONFIG REQUIRED)
 
-  include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${Boost_INCLUDE_DIRS}
-  )
+  # No need for include_directories with imported targets.
+
   add_subdirectory(Decompiler)
   add_subdirectory(Pex)
-  add_subdirectory(Champollion)
-  target_link_libraries(Champollion fmt::fmt)
+  add_subdirectory(Champollion) # Keep this *after* Decompiler and Pex
+
+  # Link to Decompiler and Pex (and now, correctly, to Boost)
+  # The Champollion executable now links to the libraries it directly depends on.
+  target_link_libraries(Champollion PRIVATE Decompiler Pex Boost::program_options fmt::fmt)
+
   install(
     TARGETS Champollion
   )
