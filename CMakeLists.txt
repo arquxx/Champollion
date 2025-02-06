@@ -29,13 +29,17 @@ include(GNUInstallDirs)
 option(CHAMPOLLION_STATIC_LIBRARY "Build Champollion as a static library" OFF)
 option(CHAMPOLLION_USE_STATIC_RUNTIME "Compile Champollion with static runtime" OFF)
 
+# --- Find Dependencies (Always do this) ---
+find_package(Boost REQUIRED COMPONENTS program_options)
+find_package(fmt CONFIG REQUIRED)
+
 if (NOT CHAMPOLLION_STATIC_LIBRARY)
   set(CMAKE_CXX_STANDARD 20)
 else()
   set(CMAKE_CXX_STANDARD 17)
 endif()
 
-# Improved auto_source_group function (same as before)
+# Improved auto_source_group function
 function(auto_source_group rootName rootDir)
   file(TO_CMAKE_PATH "${rootDir}" rootDir)
   foreach (fil ${ARGN})
@@ -72,6 +76,7 @@ set(CHAMPOLLION_CMAKE_PROJECT_CONFIG_FILE "${CHAMPOLLION_CMAKE_CONFIG_DIR}/${PRO
 set(CHAMPOLLION_CMAKE_PROJECT_TARGETS_FILE "${CHAMPOLLION_CMAKE_CONFIG_DIR}/${PROJECT_NAME}-targets.cmake")
 
 if(CHAMPOLLION_STATIC_LIBRARY)
+  # ... (code for static library build - NO CHANGES HERE) ...
   file(GLOB DECOMPILER_HEADER_FILES "Decompiler/*.hpp")
   file(GLOB PEX_HEADER_FILES "Pex/*.hpp")
   file(GLOB NODE_HEADER_FILES "Decompiler/Node/*.hpp")
@@ -122,19 +127,11 @@ if(CHAMPOLLION_STATIC_LIBRARY)
   install(FILES ${CHAMPOLLION_CMAKE_VERSION_CONFIG_FILE} ${CHAMPOLLION_CMAKE_PROJECT_CONFIG_FILE}
   DESTINATION ${CHAMPOLLION_CONFIG_INSTALL_DIR})
 else()
-  # --- Find Dependencies (Simplified with Manifest Mode) ---
-  # In manifest mode, you *usually* don't need explicit find_package calls
-  # for dependencies declared in vcpkg.json.  vcpkg handles this automatically.
-  # However, we *do* need to find_package for Boost to get the correct target names.
-
-  find_package(Boost REQUIRED COMPONENTS program_options) # Keep this!
-  find_package(fmt CONFIG REQUIRED) # Keep this!
-
+  # Now, we just add the subdirectories and link.
   add_subdirectory(Decompiler)
   add_subdirectory(Pex)
   add_subdirectory(Champollion)
 
-  # Link to Decompiler, Pex, Boost, and fmt
   target_link_libraries(Champollion PRIVATE Decompiler Pex Boost::program_options fmt::fmt)
 
   install(
