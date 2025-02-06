@@ -21,21 +21,21 @@ jobs:
 
     - name: Setup vcpkg (with caching)
       uses: actions/cache@v3
+      id: cache-vcpkg  # Add an ID to the cache step
       with:
-        path: ${{github.workspace}}/vcpkg  # Cache the entire vcpkg directory
-        key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg.json', '**/vcpkg-configuration.json') }}  # Include vcpkg-configuration.json
+        path: ${{github.workspace}}/vcpkg
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg.json', '**/vcpkg-configuration.json') }}
         restore-keys: |
           ${{ runner.os }}-vcpkg-
 
     - name: Bootstrap vcpkg (if not cached)
-      if: steps.cache-vcpkg.outputs.cache-hit != 'true'  # Only bootstrap if not cached
-      shell: cmd  # Use cmd for bootstrapping
+      if: steps.cache-vcpkg.outputs.cache-hit != 'true'
+      shell: bash  # Use bash consistently
       run: |
         git clone https://github.com/microsoft/vcpkg.git ${{github.workspace}}/vcpkg
-        cd ${{github.workspace}}/vcpkg
-        .\bootstrap-vcpkg.bat
+        ${{github.workspace}}/vcpkg/vcpkg/bootstrap-vcpkg.bat  # Corrected path!
 
-    - name: Set VCPKG_ROOT (Important!)
+    - name: Set VCPKG_ROOT
       shell: bash
       run: |
         echo "VCPKG_ROOT=${{github.workspace}}/vcpkg" >> $GITHUB_ENV
@@ -51,7 +51,7 @@ jobs:
     - name: Debug - List vcpkg Packages
       shell: bash
       run: |
-        ${{github.workspace}}/vcpkg/vcpkg.exe list  # Corrected path! Use vcpkg.exe
+        ${{github.workspace}}/vcpkg/vcpkg/vcpkg.exe list  # Corrected path!
 
     - name: Configure CMake (with vcpkg)
       shell: bash
@@ -73,7 +73,7 @@ jobs:
           ls -la ${{github.workspace}}/vcpkg/installed
           ls -la ${{github.workspace}}/vcpkg/installed/x64-windows-static
           ls -la ${{github.workspace}}/vcpkg/installed/x64-windows-static/share
-          ls -la ${{github.workspace}}/vcpkg/installed/x64-windows-static/share/boost # Crucial!
+          ls -la ${{github.workspace}}/vcpkg/installed/x64-windows-static/share/boost
 
     - name: Build
       shell: bash
@@ -83,7 +83,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{env.PROJECT_NAME}}
-        path: build/Champollion/Release/Champollion.exe  # Adjust path as needed
+        path: build/Champollion/Release/Champollion.exe
         retention-days: 90
 
   release:
