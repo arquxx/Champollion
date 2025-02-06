@@ -33,7 +33,7 @@ jobs:
       shell: bash
       run: |
         git clone https://github.com/microsoft/vcpkg.git vcpkg
-        ./vcpkg/bootstrap-vcpkg.bat  # Corrected relative path!
+        ./vcpkg/bootstrap-vcpkg.bat
 
     - name: Set VCPKG_ROOT and Triplet
       shell: bash
@@ -42,9 +42,9 @@ jobs:
         echo "VCPKG_DEFAULT_TRIPLET=x64-windows-static" >> $GITHUB_ENV
 
     - name: List vcpkg Packages (for debugging)
-      shell: bash
+      shell: pwsh  # Use PowerShell!
       run: |
-        ${{github.workspace}}/vcpkg/vcpkg.exe list
+        & "${{github.workspace}}/vcpkg/vcpkg.exe" list
 
     - name: Configure CMake (with vcpkg)
       shell: bash
@@ -82,7 +82,7 @@ jobs:
          run: |
            ls -la artifacts/*
            cd artifacts/${{ env.PROJECT_NAME }}
-           zip -r9 "../${{ env.PROJECT_NAME }}-${{ github.ref_name }}.zip" *
+           zip -r9 "../{ env.PROJECT_NAME }-${{ github.ref_name }}.zip" *
        - name: Release
          uses: softprops/action-gh-release@v1
          with:
